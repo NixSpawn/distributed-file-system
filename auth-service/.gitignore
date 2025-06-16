@@ -1,0 +1,12 @@
+.env
+
+/data
+/certs
+/tmp
+
+*.db
+*.log
+
+*.txt
+
+docker-compose.yml
