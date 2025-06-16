@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: namedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - /opt/postgresql_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  file_server:
+    build: .
+    container_name: go_file_server
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/file_server/data:/app/data
+      - /opt/file_server/logs:/app/logs
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
