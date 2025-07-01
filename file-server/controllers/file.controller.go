@@ -28,7 +28,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	if !ok || ownerID == "" {
 		msg := "No autorizado: No existe el owner_id en el token"
 		utils.Logger.WithFields(logrus.Fields{"event": "upload", "project": project, "ip": ip}).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
@@ -38,7 +38,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	if project == "" {
 		msg := "No se proporcionó nombre de proyecto"
 		utils.Logger.WithFields(logrus.Fields{"event": "upload", "project": project, "ip": ip}).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
@@ -49,7 +49,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		msg := "Error al leer el archivo: " + err.Error()
 		utils.Logger.WithFields(logrus.Fields{"event": "upload", "project": project, "ip": ip}).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
@@ -63,7 +63,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		msg := "Error al guardar el archivo: " + err.Error()
 		utils.Logger.WithFields(logrus.Fields{"event": "upload", "project": project, "ip": ip}).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
@@ -77,7 +77,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 		msg := "Error construyendo URL base: " + err.Error()
 
 		utils.Logger.WithFields(logrus.Fields{"event": "upload", "project": project, "ip": ip}).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +92,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		msg := "Error insertando metadatos: " + err.Error()
 		utils.Logger.WithError(err).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
@@ -100,13 +100,13 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Asignar permiso de "owner"
-	_, err = database.InsertFilePermissionRecord(fc.LogRepo.DB, fileRecord.ID, ownerID, "owner")
+	_, err = database.InsertFilePermissionRecord(fc.FileService.LogRepo.DB, fileRecord.ID, ownerID, "owner")
 	if err != nil {
 
 		msg := "Error asignando permisos de propietario del archivo"
 
 		utils.Logger.WithError(err).Error(msg)
-		_ = fc.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("upload", project, "", ip, "failure", msg)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -120,7 +120,7 @@ func (fc *FileController) UploadFileHandler(w http.ResponseWriter, r *http.Reque
 		"file_name": header.Filename, "file_id": fileRecord.ID, "is_public": isPublic,
 	}).Info("Archivo subido exitosamente")
 
-	_ = fc.LogRepo.LogEvent(
+	_ = fc.FileService.LogRepo.LogEvent(
 		"upload",
 		project,
 		fileRecord.URL,
@@ -149,7 +149,7 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 
 		w.Header().Set("Content-Type", "application/json")
@@ -158,7 +158,7 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	allowed, role, err := database.CheckUserFilePermission(fc.LogRepo.DB, fileID, userID)
+	allowed, role, err := database.CheckUserFilePermission(fc.FileService.LogRepo.DB, fileID, userID)
 	if err != nil {
 
 		w.Header().Set("Content-Type", "application/json")
@@ -208,8 +208,8 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	normalizedPath := filepath.ToSlash(newPath)
-	finalPath := filepath.Join(fc.StoragePath, normalizedPath)
-	absStoragePath, _ := filepath.Abs(fc.StoragePath)
+	finalPath := filepath.Join(fc.FileService.StoragePath, normalizedPath)
+	absStoragePath, _ := filepath.Abs(fc.FileService.StoragePath)
 	absFinalPath, _ := filepath.Abs(finalPath)
 	if !strings.HasPrefix(absFinalPath, absStoragePath) {
 
@@ -220,7 +220,7 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	now := time.Now()
-	err = fc.LogRepo.DB.Model(&models.File{}).
+	err = fc.FileService.LogRepo.DB.Model(&models.File{}).
 		Where("id = ? AND deleted_at IS NULL", fileID).
 		Updates(map[string]interface{}{"original_name": header.Filename, "url": normalizedPath, "updated_at": now}).
 		Error
@@ -232,7 +232,7 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 			"ip":      ip,
 		}).Error("Error actualizando registro")
 
-		_ = fc.LogRepo.LogEvent(
+		_ = fc.FileService.LogRepo.LogEvent(
 			"update",
 			project,
 			"",
@@ -256,7 +256,7 @@ func (fc *FileController) UpdateFileHandler(w http.ResponseWriter, r *http.Reque
 		"role": role, "new_file_name": header.Filename,
 	}).Info("Archivo actualizado exitosamente")
 
-	_ = fc.LogRepo.LogEvent("update", project, fileRecord.URL, ip, "success", "Archivo actualizado exitosamente")
+	_ = fc.FileService.LogRepo.LogEvent("update", project, fileRecord.URL, ip, "success", "Archivo actualizado exitosamente")
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -294,7 +294,7 @@ func (fc *FileController) DeleteFileHandler(w http.ResponseWriter, r *http.Reque
 			"ip":      ip,
 		}).Error(msg)
 
-		_ = fc.LogRepo.LogEvent("delete", "", "file id: "+fileID, ip, "failure", msg)
+		_ = fc.FileService.LogRepo.LogEvent("delete", "", "file id: "+fileID, ip, "failure", msg)
 
 		response := map[string]interface{}{
 			"message": "Error eliminando el archivo",
@@ -313,11 +313,49 @@ func (fc *FileController) DeleteFileHandler(w http.ResponseWriter, r *http.Reque
 		"ip":      ip,
 	}).Info("Archivo eliminado exitosamente")
 
-	_ = fc.LogRepo.LogEvent("delete", "", "file id: "+fileID, ip, "success", "Archivo eliminado correctamente")
+	_ = fc.FileService.LogRepo.LogEvent("delete", "", "file id: "+fileID, ip, "success", "Archivo eliminado correctamente")
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":      fileID,
 		"message": "Archivo eliminado correctamente",
 	})
+}
+
+// InternalUploadFileHandler maneja la carga de archivos replicados internamente.
+func (fc *FileController) InternalUploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	project := vars["project"]
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error al leer el archivo: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	newFileName := uuid.New().String() + filepath.Ext(header.Filename)
+	_, err = fc.FileService.UploadFile(project, newFileName, file)
+	if err != nil {
+		http.Error(w, "Error al guardar el archivo replicado: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Archivo replicado exitosamente"})
+}
+
+// InternalDeleteFileHandler maneja la eliminación de archivos replicados internamente.
+func (fc *FileController) InternalDeleteFileHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fileID := vars["id"]
+
+	err := fc.FileService.RemoveFile(fileID, "") // No hay requestorID para eliminación interna
+	if err != nil {
+		http.Error(w, "Error al eliminar el archivo replicado: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Archivo replicado eliminado exitosamente"})
 }

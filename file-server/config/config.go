@@ -17,6 +17,8 @@ type Config struct {
 	DBName      string
 	DBPassword  string
 	DBSSLMode   string
+	ReplicaURL  string
+	ReplicaAuthToken string
 }
 
 func LoadConfig() Config {
@@ -34,5 +36,7 @@ func LoadConfig() Config {
 		DBName:      os.Getenv("DB_NAME"),
 		DBPassword:  os.Getenv("DB_PASSWORD"),
 		DBSSLMode:   os.Getenv("DB_SSLMODE"),
+		ReplicaURL:  os.Getenv("REPLICA_URL"),
+		ReplicaAuthToken: os.Getenv("REPLICA_AUTH_TOKEN"),
 	}
 }

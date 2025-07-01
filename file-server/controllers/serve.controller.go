@@ -21,7 +21,7 @@ func (fc *FileController) GetFileHandler(w http.ResponseWriter, r *http.Request)
 	ip := r.RemoteAddr
 
 	// Obtener el registro del archivo usando el repositorio
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 		response := map[string]interface{}{
 			"message": "Archivo no encontrado",
@@ -45,7 +45,7 @@ func (fc *FileController) GetFileHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Obtener los permisos asociados al archivo
-	permissions, err := database.GetFilePermissions(fc.LogRepo.DB, fileID)
+	permissions, err := database.GetFilePermissions(fc.FileService.LogRepo.DB, fileID)
 	if err != nil {
 		response := map[string]interface{}{
 			"message": "Error obteniendo permisos",
@@ -63,7 +63,7 @@ func (fc *FileController) GetFileHandler(w http.ResponseWriter, r *http.Request)
 		"ip":      ip,
 	}).Info("Información del archivo recuperada")
 
-	_ = fc.LogRepo.LogEvent(
+	_ = fc.FileService.LogRepo.LogEvent(
 		"get_file",
 		"",
 		"file_id: "+fileID,
@@ -106,7 +106,7 @@ func (fc *FileController) ServeFileHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Construir la ruta física absoluta
-	filePath := filepath.Join(fc.StoragePath, fileRecord.URL)
+	filePath := filepath.Join(fc.FileService.StoragePath, fileRecord.URL)
 	
 	// Asegurar que tenemos un nombre de archivo válido
 	filename := fileRecord.OriginalName
@@ -146,7 +146,7 @@ func (fc *FileController) ServeFileHandler(w http.ResponseWriter, r *http.Reques
 					"public":  true,
 			}).Info("Acceso a archivo público exitoso")
 
-			_ = fc.LogRepo.LogEvent(
+			_ = fc.FileService.LogRepo.LogEvent(
 					"access",
 					"",
 					"file_id: "+fileID,
@@ -169,7 +169,7 @@ func (fc *FileController) ServeFileHandler(w http.ResponseWriter, r *http.Reques
 					"ip":      ip,
 			}).Warn(msg)
 
-			_ = fc.LogRepo.LogEvent(
+			_ = fc.FileService.LogRepo.LogEvent(
 					"access",
 					"",
 					"file_id: "+fileID,
@@ -197,7 +197,7 @@ func (fc *FileController) ServeFileHandler(w http.ResponseWriter, r *http.Reques
 					"ip":      ip,
 			}).Warn(msg)
 
-			_ = fc.LogRepo.LogEvent(
+			_ = fc.FileService.LogRepo.LogEvent(
 					"access",
 					"",
 					"file_id: "+fileID,
@@ -254,7 +254,7 @@ func (fc *FileController) ServeFileHandler(w http.ResponseWriter, r *http.Reques
 			"ip":      ip,
 	}).Info("Acceso a archivo exitoso")
 
-	_ = fc.LogRepo.LogEvent(
+	_ = fc.FileService.LogRepo.LogEvent(
 			"access",
 			"",
 			"file_id: "+fileID,

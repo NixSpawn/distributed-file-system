@@ -83,7 +83,7 @@ func (fc *FileController) AddFilePermissionHandler(w http.ResponseWriter, r *htt
 	// Verificar que el usuario a agregar no sea el propietario del archivo
 
 	// Obtener el registro del archivo
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 
 		msg := "Archivo no encontrado"
@@ -114,23 +114,23 @@ func (fc *FileController) AddFilePermissionHandler(w http.ResponseWriter, r *htt
 	}
 
 	// Insertar el registro de permiso usando el repositorio
-	_, err = database.InsertFilePermissionRecord(fc.LogRepo.DB, fileID, req.UserID, req.Role)
+	_, err = database.InsertFilePermissionRecord(fc.FileService.LogRepo.DB, fileID, req.UserID, req.Role)
 	if err != nil {
 
 		msg := "Error agregando permiso: " + err.Error()
 		utils.Logger.WithFields(logrus.Fields{
-      "event":   "add_permission",
-      "file_id": fileID,
-      "ip":      ip,
-    }).Error(msg)
-		_ = fc.LogRepo.LogEvent(
-      "add_permission",
-      "",
-      "file id: " + fileID,
-      ip,
+			"event":   "add_permission",
+			"file_id": fileID,
+			"ip":      ip,
+		}).Error(msg)
+		_ = fc.FileService.LogRepo.LogEvent(
+			"add_permission",
+			"",
+			"file id: "+fileID,
+			ip,
 			"failure",
-      msg,
-    )
+			msg,
+		)
 
 		response := map[string]interface{}{
 			"message": "Error agregando permiso",
@@ -143,7 +143,7 @@ func (fc *FileController) AddFilePermissionHandler(w http.ResponseWriter, r *htt
 	}
 
 	// Obtener los permisos actualizados del archivo
-	permissions, err := database.GetFilePermissions(fc.LogRepo.DB, fileID)
+	permissions, err := database.GetFilePermissions(fc.FileService.LogRepo.DB, fileID)
 	if err != nil {
 
 		msg := "Error obteniendo permisos"
@@ -168,13 +168,13 @@ func (fc *FileController) AddFilePermissionHandler(w http.ResponseWriter, r *htt
 		"ip":             ip,
 	}).Info("Permiso agregado correctamente")
 
-	_ = fc.LogRepo.LogEvent(
+	_ = fc.FileService.LogRepo.LogEvent(
 		"add_permission",
-    "",
-    "file id: " + fileID,
-    ip,
-    "success",
-    "Permiso agregado correctamente",
+		"",
+		"file id: "+fileID,
+		ip,
+		"success",
+		"Permiso agregado correctamente",
 	)
 
 	response := map[string]interface{}{
@@ -256,7 +256,7 @@ func (fc *FileController) UpdateFilePermissionsHandler(w http.ResponseWriter, r 
 	// Verificar que el usuario a agregar no sea el propietario del archivo
 
 	// Obtener el registro del archivo
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 
 		response := map[string]interface{}{
@@ -299,14 +299,14 @@ func (fc *FileController) UpdateFilePermissionsHandler(w http.ResponseWriter, r 
 			"ip":      ip,
 		}).Error(msg)
 
-		_ = fc.LogRepo.LogEvent(
-      "update_permissions",
-      "",
-      "file id: " + fileID,
-      ip,
+		_ = fc.FileService.LogRepo.LogEvent(
+			"update_permissions",
+			"",
+			"file id: "+fileID,
+			ip,
 			"failure",
-      msg,
-    )
+			msg,
+		)
 
 		response := map[string]interface{}{
 			"message": msg,
@@ -325,18 +325,18 @@ func (fc *FileController) UpdateFilePermissionsHandler(w http.ResponseWriter, r 
 		"ip":      ip,
 	}).Info("Permisos actualizados correctamente")
 
-	_ = fc.LogRepo.LogEvent(
-    "update_permissions",
-    "",
-    "file id: " + fileID,
-    ip,
+	_ = fc.FileService.LogRepo.LogEvent(
+		"update_permissions",
+		"",
+		"file id: "+fileID,
+		ip,
 		"success",
-    "Permisos actualizados correctamente",
-  )
+		"Permisos actualizados correctamente",
+	)
 
 	// Obtener los permisos actualizados para la respuesta
 	file, _ := fc.FileService.GetFileRecordByID(fileID)
-	permissions, _ := database.GetFilePermissions(fc.LogRepo.DB, fileID)
+	permissions, _ := database.GetFilePermissions(fc.FileService.LogRepo.DB, fileID)
 
 	response := map[string]interface{}{
 		"file":        file,
@@ -402,7 +402,7 @@ func (fc *FileController) DeleteFilePermissionHandler(w http.ResponseWriter, r *
 	}
 
 	// Obtener el registro del archivo
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 
 		response := map[string]interface{}{
@@ -450,14 +450,14 @@ func (fc *FileController) DeleteFilePermissionHandler(w http.ResponseWriter, r *
 			"ip":      ip,
 		}).Error(msg)
 
-		_ = fc.LogRepo.LogEvent(
-      "delete_permissions",
-      "",
-      "file id: " + fileID,
-      ip,
+		_ = fc.FileService.LogRepo.LogEvent(
+			"delete_permissions",
+			"",
+			"file id: "+fileID,
+			ip,
 			"failure",
-      msg,
-    )
+			msg,
+		)
 
 		response := map[string]interface{}{
 			"message": msg,
@@ -475,18 +475,18 @@ func (fc *FileController) DeleteFilePermissionHandler(w http.ResponseWriter, r *
 		"ip":      ip,
 	}).Info("Permisos eliminados correctamente")
 
-	_ = fc.LogRepo.LogEvent(
-    "delete_permissions",
-    "",
-    "file id: " + fileID,
-    ip,
+	_ = fc.FileService.LogRepo.LogEvent(
+		"delete_permissions",
+		"",
+		"file id: "+fileID,
+		ip,
 		"success",
-    "Permisos eliminados correctamente",
-  )
+		"Permisos eliminados correctamente",
+	)
 
 	// Obtener los permisos actualizados para la respuesta
 	file, _ := fc.FileService.GetFileRecordByID(fileID)
-	permissions, _ := database.GetFilePermissions(fc.LogRepo.DB, fileID)
+	permissions, _ := database.GetFilePermissions(fc.FileService.LogRepo.DB, fileID)
 
 	response := map[string]interface{}{
 		"file":        file,

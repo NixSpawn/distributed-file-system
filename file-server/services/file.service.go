@@ -1,7 +1,9 @@
 package services
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,23 +15,49 @@ import (
 
 // FileService orquesta la lógica relacionada a archivos.
 type FileService struct {
-	Storage     storage.Storage
-	LogRepo     *database.LogRepository
-	StoragePath string
+	Storage      storage.Storage
+	LogRepo      *database.LogRepository
+	ReplicaSvc   *ReplicaService
+	StoragePath  string
 }
 
 // NewFileService crea una instancia de FileService.
-func NewFileService(storage storage.Storage, logRepo *database.LogRepository, storagePath string) *FileService {
+func NewFileService(storage storage.Storage, logRepo *database.LogRepository, replicaSvc *ReplicaService, storagePath string) *FileService {
 	return &FileService{
 		Storage:     storage,
 		LogRepo:     logRepo,
+		ReplicaSvc:  replicaSvc,
 		StoragePath: storagePath,
 	}
 }
 
 // UploadFile sube un archivo y devuelve la ruta relativa.
 func (fs *FileService) UploadFile(project, filename string, data io.Reader) (string, error) {
-	return fs.Storage.SaveFile(project, filename, data)
+	// Leer los datos en un búfer para que se puedan leer dos veces
+	buf, err := io.ReadAll(data)
+	if err != nil {
+		return "", err
+	}
+
+	// Crear dos lectores a partir del búfer
+	reader1 := bytes.NewReader(buf)
+	reader2 := bytes.NewReader(buf)
+
+	// Guardar el archivo localmente
+	url, err := fs.Storage.SaveFile(project, filename, reader1)
+	if err != nil {
+		return "", err
+	}
+
+	// Replicar el archivo
+	if err := fs.ReplicaSvc.ReplicateFile(project, filename, reader2); err != nil {
+		// En un sistema real, es posible que desee manejar este error de manera diferente,
+		// por ejemplo, agregando el archivo a una cola para reintentar la replicación más tarde.
+		// Por ahora, simplemente registraremos el error pero no devolveremos un error al cliente.
+		fmt.Printf("Error al replicar el archivo: %v\n", err)
+	}
+
+	return url, nil
 }
 
 // CreateFileRecord crea el registro del archivo en la base de datos.
@@ -103,5 +131,13 @@ func (fs *FileService) RemoveFile(fileID, requestorID string) error {
 	if err := os.Remove(physicalPath); err != nil {
 		// Se continúa aun si falla la eliminación física
 	}
+
+	// Eliminar el archivo del servidor de réplica
+	if err := fs.ReplicaSvc.DeleteFile(file.URL); err != nil {
+		// Al igual que con la replicación, es posible que desee manejar este error de manera diferente
+		// en un sistema real.
+		fmt.Printf("Error al eliminar el archivo de la réplica: %v\n", err)
+	}
+
 	return database.DeleteFileRecord(fs.LogRepo.DB, fileID)
 }

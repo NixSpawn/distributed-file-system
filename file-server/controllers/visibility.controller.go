@@ -48,7 +48,7 @@ func (fc *FileController) UpdateFileVisibilityHandler(w http.ResponseWriter, r *
 	}
 
 	// Obtener el registro del archivo
-	fileRecord, err := database.GetFileRecordById(fc.LogRepo.DB, fileID)
+	fileRecord, err := database.GetFileRecordById(fc.FileService.LogRepo.DB, fileID)
 	if err != nil || fileRecord == nil {
 
 		response := map[string]interface{}{
@@ -76,7 +76,7 @@ func (fc *FileController) UpdateFileVisibilityHandler(w http.ResponseWriter, r *
 	}
 
 	// Actualizar la visibilidad usando el repositorio
-	if err := database.UpdateFileIsPublic(fc.LogRepo.DB, fileID, req.IsPublic); err != nil {
+	if err := database.UpdateFileIsPublic(fc.FileService.LogRepo.DB, fileID, req.IsPublic); err != nil {
 
 		response := map[string]interface{}{
 			"message": "Error actualizando visibilidad",
@@ -100,7 +100,7 @@ func (fc *FileController) UpdateFileVisibilityHandler(w http.ResponseWriter, r *
 		"is_public": req.IsPublic,
 	}).Info("Visibilidad del archivo actualizada correctamente")
 
-	fc.LogRepo.LogEvent(
+	fc.FileService.LogRepo.LogEvent(
 		"update_visibility",
     "",
     "file_id: " + fileID,
